@@ -1,0 +1,9 @@
+<?php
+// $Id: zombiekiller.module,v 1.1 2009/10/13 10:40:18 dixon Exp $
+
+/**
+ * Implementation of hook_cron().
+ */
+function zombiekiller_cron() {
+  // TODO: Go on rampage!
+}
