@@ -1,4 +1,4 @@
 ; $Id: zombiekiller.info,v 1.1 2009/10/13 10:40:18 dixon Exp $
-name = Zombie Killer
-description = This module kills zombies!
+name = Zombie killer
+description = Go on a rampage and kill zombies.
 core = 6.x

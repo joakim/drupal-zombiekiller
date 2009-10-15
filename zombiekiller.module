@@ -2,8 +2,194 @@
 // $Id: zombiekiller.module,v 1.1 2009/10/13 10:40:18 dixon Exp $
 
 /**
- * Implementation of hook_cron().
+ * @file
+ * This module lets you kill zombies. No kidding.
+ *
+ * Authors:
+ *   Joakim Stai <http://drupal.org/user/88701>
+ *   Dick Olsson <http://drupal.org/user/239911>
  */
-function zombiekiller_cron() {
-  // TODO: Go on rampage!
+
+/**
+ * Implementation of hook_perms().
+ */
+function zombiekiller_perm() {
+  return array('kill zombies');
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function zombiekiller_menu() {
+  $items = array();
+
+  $items['admin/settings/zombiekiller'] = array(
+    'title' => 'Zombie killer',
+    'description' => 'Go on a rampage and kill zombies.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('zombiekiller_rampage'),
+    'access callback' => 'user_access',
+    'access arguments' => array('kill zombies'),
+  );
+
+  return $items;
+}
+
+/**
+ * Go on rampage.
+ */
+function zombiekiller_rampage($form_state) {
+  // Forms API multistep handling. Killing zombies is hard work.
+  if (!empty($form_state['storage']['values']['parents'])) {
+    return zombiekiller_rampage_confirm($form_state);
+  }
+  else {
+    return zombiekiller_rampage_start(); 
+  }
+}
+
+/**
+ * Select zombies to kill.
+ */
+function zombiekiller_rampage_start() {
+  $form = array();
+  $zombies = array();
+
+  // Shell command for finding zombies.
+  $awk_action = '{ print $1 "\t" $2 "\t" $3 "\t" $4 "\t" $5 "\t" $6 }';
+  $command = "ps -aexo state,xstat,pid,ppid,user,command | awk '$awk_action' | grep -e '^[Zz]'";
+
+  // Any zombies around?
+  if ($result = shell_exec($command)) {
+    $result = explode("\n", trim($result));
+    foreach ($result as $zombie) {
+      $values = explode("\t", $zombie);
+      $zombies[$values[3]] = t('%process by user %user', array('%process' => $values[5], '%user' => $values[4]));
+
+      // TODO: Add array of zombies as a hidden form value.
+      //$zombies[$values[3]] = array_combine(array('state', 'xstat', 'pid', 'ppid', 'user', 'command'), $values);
+    }
+  }
+
+  // There be zombies.
+  if (count($zombies) > 0) {
+
+    // Warn about the dangers involved in killing zombies.
+    $warning = t('This actually kills zombie processes on UNIX-like systems. You should not do this unless you know what you are doing, so think twice before going on a killing spree. Read more about zombie processes on <a href="http://en.wikipedia.org/wiki/Zombie_process">Wikipedia</a> or <a href="http://zombieprocess.wordpress.com/what-is-a-zombie-process/">this aptly named blog</a>.');
+    drupal_set_message($warning, 'warning', FALSE);
+
+    $form['zombies'] = array(
+      '#type' => 'checkboxes',
+      '#title' => t('Zombies'),
+      '#description' => t('Aim to kill! Select the zombies you want to slay.'),
+      '#options' => $zombies,
+    );
+
+    $form['weapon'] = array(
+      '#type' => 'radios',
+      '#title' => t('Weapon of choice'),
+      '#description' => t('<strong>Shovel:</strong> Politely asks the parent process to reap its zombies (<em>kill -s SIGCHLD [ppid]</em>).<br/><strong>Sledgehammer:</strong> Brutally kills the parent process and any of its zombies (<em>kill -9 [ppid]</em>).'),
+      '#options' => array(
+        'signal' => t('Shovel'),
+        'kill' => t('Sledgehammer'),
+      ),
+      '#default_value' => 'signal',
+    );
+
+    $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Kill selected zombies'),
+    );
+  }
+
+  // No zombies! We're safe for now.
+  else {
+    $form['no_zombies'] = array(
+      '#type' => 'item',
+      '#value' => t('There are no more nasty zombies around! Come back later to see if more zombies have shown up.'),
+      '#description' => t('Who said Drupal cannot kill zombies?'),
+    );
+  }
+
+  return $form;
+}
+
+/**
+ * Confirm killing of zombies.
+ */
+function zombiekiller_rampage_confirm($form_state) {
+  $form = array();
+
+  // Find parent processes for the selected zombies.
+  foreach ($form_state['storage']['values']['parents'] as $ppid) {
+    $awk_action = '{ print $1 "\t" $2 "\t" $3 }';
+    $command = "ps -aexo pid,user,command | awk '$awk_action' | grep -e '^$ppid'";
+
+    if ($result = shell_exec($command)) {
+      $values = explode("\t", $result);
+      $parents[$ppid] = t('%process by user %user', array('%process' => $values[2], '%user' => $values[1]));
+    }
+  }
+
+  $weapon = $form_state['storage']['values']['weapon'];
+
+  $form['weapon'] = array(
+    '#type' => 'item',
+    '#title' => t('Weapon of choice'),
+    '#value' => $weapon == 'signal' ? t('Shovel') : t('Sledgehammer'),
+  );
+
+  $form['parents'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Parent processes of selected zombies'),
+    '#description' => $weapon == 'signal' ? t('Select the parent processes you want to hit with a shovel (<em>kill -s SIGCHLD [pid]</em>).') : t('Select the parent processes you want to hit with a sledghammer (<em>kill -9 [pid]</em>).'),
+    '#options' => $parents,
+  );
+
+  $form['confirm'] = array(
+    '#type' => 'submit',
+    '#value' => t('Kill selected processes'),
+  );
+  $form['cancel'] = array(
+    '#type' => 'submit',
+    '#value' => t('Cancel'),
+  );
+
+  return $form;
+}
+
+/**
+ * Form submit handler.
+ */
+function zombiekiller_rampage_submit($form, &$form_state) {
+  // Form storage initiation/resetting.
+  if (empty($form_state['storage']) || $form_state['values']['op'] == t('Cancel')) {
+    $form_state['storage'] = array();
+    $form_state['storage']['values'] = array();
+  }
+
+  // The rampage is on, store values for use in confirmation form.
+  if ($form_state['values']['op'] == t('Kill selected zombies')) {
+    $form_state['storage']['values']['parents'] = $form_state['values']['zombies'];
+    $form_state['storage']['values']['weapon'] = $form_state['values']['weapon'];
+  }
+
+  // Slaying of zombies confirmed!
+  elseif ($form_state['values']['op'] == t('Kill selected processes')) {
+
+    // Bring out our weapon of choice.
+    $weapon = $form_state['storage']['values']['weapon'];
+
+    // Die zombies, die!!!
+    foreach ($form_state['values']['parents'] as $ppid) {
+      if ($weapon == 'signal') {
+        shell_exec('kill -s SIGCHLD '. $ppid); // BAM!
+      }
+      elseif ($weapon == 'kill') {
+        shell_exec('kill -9 parent '. $ppid); // POW!
+      }
+
+      // @TODO: Check whether zombie was successfully killed.
+    }
+  }
 }
