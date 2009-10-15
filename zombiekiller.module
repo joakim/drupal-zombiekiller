@@ -88,7 +88,7 @@ function zombiekiller_rampage_start() {
     $form['weapon'] = array(
       '#type' => 'radios',
       '#title' => t('Weapon of choice'),
-      '#description' => t('<strong>Shovel:</strong> Politely asks the parent process to reap its zombies (<em>kill -s SIGCHLD [ppid]</em>).<br/><strong>Sledgehammer:</strong> Brutally kills the parent process and any of its zombies (<em>kill -9 [ppid]</em>).'),
+      '#description' => t('<strong>Shovel:</strong> Politely asks the parent process to reap its zombies (<em>kill -s SIGCHLD</em>).<br/><strong>Sledgehammer:</strong> Brutally kills the parent process and any of its zombies (<em>kill -9</em>).'),
       '#options' => array(
         'signal' => t('Shovel'),
         'kill' => t('Sledgehammer'),
@@ -142,7 +142,7 @@ function zombiekiller_rampage_confirm($form_state) {
   $form['parents'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Parent processes of selected zombies'),
-    '#description' => $weapon == 'signal' ? t('Select the parent processes you want to hit with a shovel (<em>kill -s SIGCHLD [pid]</em>).') : t('Select the parent processes you want to hit with a sledghammer (<em>kill -9 [pid]</em>).'),
+    '#description' => $weapon == 'signal' ? t('Select the parent processes you want to hit with a shovel (<em>kill -s SIGCHLD</em>).') : t('Select the parent processes you want to hit with a sledghammer (<em>kill -9</em>).'),
     '#options' => $parents,
   );
 
