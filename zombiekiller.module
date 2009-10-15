@@ -1,13 +1,13 @@
 <?php
-// $Id: zombiekiller.module,v 1.1 2009/10/13 10:40:18 dixon Exp $
+// $Id$
 
 /**
  * @file
  * This module lets you kill zombies. No kidding.
  *
  * Authors:
- *   Joakim Stai <http://drupal.org/user/88701>
- *   Dick Olsson <http://drupal.org/user/239911>
+ *   Joakim Stai (ximo) <http://drupal.org/user/88701>
+ *   Dick Olsson (dixon_) <http://drupal.org/user/239911>
  */
 
 /**
@@ -25,7 +25,7 @@ function zombiekiller_menu() {
 
   $items['admin/settings/zombiekiller'] = array(
     'title' => 'Zombie killer',
-    'description' => 'Go on a rampage and kill zombies.',
+    'description' => 'Go on rampage and kill zombies.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('zombiekiller_rampage'),
     'access callback' => 'user_access',
@@ -49,7 +49,7 @@ function zombiekiller_rampage($form_state) {
 }
 
 /**
- * Select zombies to kill.
+ * Select which zombies to kill.
  */
 function zombiekiller_rampage_start() {
   $form = array();
@@ -66,7 +66,7 @@ function zombiekiller_rampage_start() {
       $values = explode("\t", $zombie);
       $zombies[$values[3]] = t('%process by user %user', array('%process' => $values[5], '%user' => $values[4]));
 
-      // TODO: Add array of zombies as a hidden form value.
+      // TODO: Add array of zombies as hidden form value for checking later on.
       //$zombies[$values[3]] = array_combine(array('state', 'xstat', 'pid', 'ppid', 'user', 'command'), $values);
     }
   }
@@ -75,8 +75,10 @@ function zombiekiller_rampage_start() {
   if (count($zombies) > 0) {
 
     // Warn about the dangers involved in killing zombies.
-    $warning = t('This actually kills zombie processes on UNIX-like systems. You should not do this unless you know what you are doing, so think twice before going on a killing spree. Read more about zombie processes on <a href="http://en.wikipedia.org/wiki/Zombie_process">Wikipedia</a> or <a href="http://zombieprocess.wordpress.com/what-is-a-zombie-process/">this aptly named blog</a>.');
+    $warning = t('This kills actual zombie processes on UNIX-like systems. You should not do this unless you know what you are doing, so think twice before going on a killing spree. For more information, see <a href="http://en.wikipedia.org/wiki/Zombie_process">Wikipedia</a> or <a href="http://zombieprocess.wordpress.com/what-is-a-zombie-process/">this aptly named blog</a>.');
     drupal_set_message($warning, 'warning', FALSE);
+
+    // TODO: Don't be so cheap. Present zombies in a table with more info.
 
     $form['zombies'] = array(
       '#type' => 'checkboxes',
@@ -88,7 +90,7 @@ function zombiekiller_rampage_start() {
     $form['weapon'] = array(
       '#type' => 'radios',
       '#title' => t('Weapon of choice'),
-      '#description' => t('<strong>Shovel:</strong> Politely asks the parent process to reap its zombies (<em>kill -s SIGCHLD</em>).<br/><strong>Sledgehammer:</strong> Brutally kills the parent process and any of its zombies (<em>kill -9</em>).'),
+      '#description' => t("<strong>Shovel:</strong> Asks the parent process to reap its zombies (<em>kill -s SIGCHLD</em>). Not always successful, but fairly safe.<br/><strong>Sledgehammer:</strong> Brutally kills the parent process and any of its zombies (<em>kill -9</em>). Very effective, but with potential to hit yourself in the foot."),
       '#options' => array(
         'signal' => t('Shovel'),
         'kill' => t('Sledgehammer'),
@@ -98,7 +100,7 @@ function zombiekiller_rampage_start() {
 
     $form['submit'] = array(
       '#type' => 'submit',
-      '#value' => t('Kill selected zombies'),
+      '#value' => t('Go on rampage!'),
     );
   }
 
@@ -159,7 +161,7 @@ function zombiekiller_rampage_confirm($form_state) {
 }
 
 /**
- * Form submit handler.
+ * Rampage handler.
  */
 function zombiekiller_rampage_submit($form, &$form_state) {
   // Form storage initiation/resetting.
@@ -168,13 +170,13 @@ function zombiekiller_rampage_submit($form, &$form_state) {
     $form_state['storage']['values'] = array();
   }
 
-  // The rampage is on, store values for use in confirmation form.
-  if ($form_state['values']['op'] == t('Kill selected zombies')) {
+  // The rampage is on! Store values for use in confirmation form.
+  if ($form_state['values']['op'] == t('Go on rampage!')) {
     $form_state['storage']['values']['parents'] = $form_state['values']['zombies'];
     $form_state['storage']['values']['weapon'] = $form_state['values']['weapon'];
   }
 
-  // Slaying of zombies confirmed!
+  // Slaying of zombies confirmed, let's go!
   elseif ($form_state['values']['op'] == t('Kill selected processes')) {
 
     // Bring out our weapon of choice.
@@ -189,7 +191,7 @@ function zombiekiller_rampage_submit($form, &$form_state) {
         shell_exec('kill -9 parent '. $ppid); // POW!
       }
 
-      // @TODO: Check whether zombie was successfully killed.
+      // TODO: Check whether zombie was successfully killed or still undead.
     }
   }
 }
