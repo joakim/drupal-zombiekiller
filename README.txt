@@ -35,5 +35,5 @@ MORE INFORMATION
 MAINTAINERS
 -----------
 
-Joakim Stai (ximo)
-Dick Olsson (dixon_)
+Joakim Stai (ximo), developer
+Dick Olsson (dixon_), accomplice
